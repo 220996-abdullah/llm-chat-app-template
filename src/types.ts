@@ -2,22 +2,28 @@
  * Type definitions for the LLM chat application.
  */
 
+/**
+ * Cloudflare Worker environment bindings
+ */
 export interface Env {
-	/**
-	 * Binding for the Workers AI API.
-	 */
 	AI: Ai;
-
-	/**
-	 * Binding for static assets.
-	 */
 	ASSETS: { fetch: (request: Request) => Promise<Response> };
 }
 
 /**
- * Represents a chat message.
+ * Chat message structure
  */
 export interface ChatMessage {
 	role: "system" | "user" | "assistant";
 	content: string;
+}
+
+/**
+ * API request body (clean extension for future features like history)
+ */
+export interface ChatRequest {
+	messages: ChatMessage[];
+
+	// optional future feature (chat history id)
+	sessionId?: string;
 }

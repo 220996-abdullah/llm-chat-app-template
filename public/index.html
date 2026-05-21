@@ -1,179 +1,55 @@
-<!doctype html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>LLM Chat App</title>
+<script>
+/* =========================
+   SAFE CHAT HISTORY FIX
+   ========================= */
 
-		<style>
-			:root {
-				--primary-color: #f6821f;
-				--primary-hover: #e67e22;
-				--light-bg: #f9fafb;
-				--border-color: #e5e7eb;
-				--text-color: #1f2937;
-				--text-light: #6b7280;
-				--user-msg-bg: #fff2e6;
-				--assistant-msg-bg: #f3f4f6;
-			}
+let chatHistory = JSON.parse(localStorage.getItem("chat_history") || "[]");
 
-			* {
-				box-sizing: border-box;
-				margin: 0;
-				padding: 0;
-			}
+// Save history safely
+function saveHistory(role, content) {
+	chatHistory.push({ role, content });
+	localStorage.setItem("chat_history", JSON.stringify(chatHistory));
+}
 
-			body {
-				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-					Oxygen, Ubuntu, Cantarell, sans-serif;
-				line-height: 1.6;
-				color: var(--text-color);
-				max-width: 800px;
-				margin: 0 auto;
-				padding: 1rem;
-			}
+// Hook into DOM after messages appear
+const observer = new MutationObserver(() => {
+	const messages = document.querySelectorAll(".message");
 
-			header {
-				text-align: center;
-				margin-bottom: 2rem;
-				padding: 1rem 0;
-				border-bottom: 1px solid var(--border-color);
-			}
+	messages.forEach((msg, index) => {
+		const p = msg.querySelector("p");
+		if (!p) return;
 
-			h1 {
-				font-size: 1.5rem;
-				color: var(--primary-color);
-			}
+		let text = p.innerHTML;
 
-			.chat-container {
-				display: flex;
-				flex-direction: column;
-				height: calc(100vh - 200px);
-				min-height: 400px;
-				border: 1px solid var(--border-color);
-				border-radius: 8px;
-				overflow: hidden;
-			}
+		// Convert links to clickable
+		const urlRegex = /(https?:\/\/[^\s]+)/g;
+		p.innerHTML = text.replace(urlRegex, (url) => {
+			return `<a href="${url}" target="_blank" style="color:blue;text-decoration:underline">${url}</a>`;
+		});
+	});
+});
 
-			.chat-messages {
-				flex: 1;
-				overflow-y: auto;
-				padding: 1rem;
-				background-color: var(--light-bg);
-			}
+// Start observing chat area
+const chatBox = document.getElementById("chat-messages");
+if (chatBox) {
+	observer.observe(chatBox, {
+		childList: true,
+		subtree: true,
+	});
+}
 
-			.message {
-				margin-bottom: 1rem;
-				padding: 0.75rem;
-				border-radius: 8px;
-				max-width: 80%;
-			}
+/* =========================
+   RESTORE OLD CHAT ON LOAD
+   ========================= */
+window.addEventListener("load", () => {
+	const chatBox = document.getElementById("chat-messages");
+	if (!chatBox) return;
 
-			.message p {
-				white-space: pre-line;
-				margin: 0;
-				overflow-wrap: anywhere;
-			}
-
-			.user-message {
-				background-color: var(--user-msg-bg);
-				align-self: flex-end;
-				margin-left: auto;
-			}
-
-			.assistant-message {
-				background-color: var(--assistant-msg-bg);
-				align-self: flex-start;
-			}
-
-			.message-input {
-				display: flex;
-				padding: 0.75rem;
-				border-top: 1px solid var(--border-color);
-				background-color: white;
-			}
-
-			#user-input {
-				flex: 1;
-				padding: 0.75rem;
-				border: 1px solid var(--border-color);
-				border-radius: 4px;
-				font-family: inherit;
-				resize: none;
-				min-height: 44px;
-			}
-
-			#send-button {
-				margin-left: 0.5rem;
-				padding: 0 1rem;
-				background-color: var(--primary-color);
-				color: white;
-				border: none;
-				border-radius: 4px;
-				cursor: pointer;
-			}
-
-			#send-button:hover {
-				background-color: var(--primary-hover);
-			}
-		</style>
-	</head>
-
-	<body>
-		<header>
-			<h1>Cloudflare AI Chat</h1>
-		</header>
-
-		<div class="chat-container">
-			<div id="chat-messages" class="chat-messages"></div>
-
-			<div class="message-input">
-				<textarea id="user-input" placeholder="Type message..."></textarea>
-				<button id="send-button">Send</button>
-			</div>
-		</div>
-
-		<!-- original script -->
-		<script src="chat.js"></script>
-
-		<!-- ✅ FIX SCRIPT (HISTORY + LINKS) -->
-		<script>
-			// -------------------------------
-			// 💾 CHAT HISTORY FIX
-			// -------------------------------
-			const oldAddMessageToChat = window.addMessageToChat;
-
-			let savedHistory = JSON.parse(
-				localStorage.getItem("chat_history") || "[]"
-			);
-
-			// restore on load
-			window.addEventListener("load", () => {
-				savedHistory.forEach((m) => {
-					oldAddMessageToChat(m.role, m.content);
-				});
-			});
-
-			// override addMessageToChat to save messages
-			window.addMessageToChat = function (role, content) {
-				savedHistory.push({ role, content });
-				localStorage.setItem(
-					"chat_history",
-					JSON.stringify(savedHistory)
-				);
-
-				return oldAddMessageToChat(role, content);
-			};
-
-			// -------------------------------
-			// 🔗 LINK FIX (CLICKABLE URLS)
-			// -------------------------------
-			document.addEventListener("click", function (e) {
-				if (e.target.tagName === "A") {
-					e.preventDefault();
-					window.open(e.target.href, "_blank");
-				}
-			});
-		</script>
-	</body>
-</html>
+	chatHistory.forEach((m) => {
+		const div = document.createElement("div");
+		div.className = `message ${m.role}-message`;
+		div.innerHTML = `<p>${m.content}</p>`;
+		chatBox.appendChild(div);
+	});
+});
+</script>

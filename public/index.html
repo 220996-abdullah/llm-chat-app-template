@@ -4,6 +4,7 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>LLM Chat App</title>
+
 		<style>
 			:root {
 				--primary-color: #f6821f;
@@ -23,9 +24,8 @@
 			}
 
 			body {
-				font-family:
-					-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
-					Cantarell, sans-serif;
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+					Oxygen, Ubuntu, Cantarell, sans-serif;
 				line-height: 1.6;
 				color: var(--text-color);
 				max-width: 800px;
@@ -111,73 +111,69 @@
 				border: none;
 				border-radius: 4px;
 				cursor: pointer;
-				transition: background-color 0.2s;
 			}
 
 			#send-button:hover {
 				background-color: var(--primary-hover);
 			}
-
-			#send-button:disabled {
-				background-color: var(--text-light);
-				cursor: not-allowed;
-			}
-
-			.typing-indicator {
-				display: none;
-				font-style: italic;
-				color: var(--text-light);
-				padding: 1rem;
-			}
-
-			.typing-indicator.visible {
-				display: block;
-			}
-
-			footer {
-				margin-top: 1rem;
-				text-align: center;
-				font-size: 0.85rem;
-				color: var(--text-light);
-			}
 		</style>
 	</head>
+
 	<body>
 		<header>
 			<h1>Cloudflare AI Chat</h1>
-			<p>Powered by Cloudflare Workers AI</p>
 		</header>
 
 		<div class="chat-container">
-			<div id="chat-messages" class="chat-messages">
-				<div class="message assistant-message">
-					<p>
-						Hello! I'm an LLM chat app powered by Cloudflare Workers AI. How can
-						I help you today?
-					</p>
-				</div>
-			</div>
-
-			<div class="typing-indicator" id="typing-indicator">
-				AI is thinking...
-			</div>
+			<div id="chat-messages" class="chat-messages"></div>
 
 			<div class="message-input">
-				<textarea
-					id="user-input"
-					placeholder="Type your message here..."
-					rows="1"
-					autofocus
-				></textarea>
+				<textarea id="user-input" placeholder="Type message..."></textarea>
 				<button id="send-button">Send</button>
 			</div>
 		</div>
 
-		<footer>
-			<p>Cloudflare Workers AI Chat Template &copy; 2025</p>
-		</footer>
-
-		<!-- Chat app script -->
+		<!-- original script -->
 		<script src="chat.js"></script>
+
+		<!-- ✅ FIX SCRIPT (HISTORY + LINKS) -->
+		<script>
+			// -------------------------------
+			// 💾 CHAT HISTORY FIX
+			// -------------------------------
+			const oldAddMessageToChat = window.addMessageToChat;
+
+			let savedHistory = JSON.parse(
+				localStorage.getItem("chat_history") || "[]"
+			);
+
+			// restore on load
+			window.addEventListener("load", () => {
+				savedHistory.forEach((m) => {
+					oldAddMessageToChat(m.role, m.content);
+				});
+			});
+
+			// override addMessageToChat to save messages
+			window.addMessageToChat = function (role, content) {
+				savedHistory.push({ role, content });
+				localStorage.setItem(
+					"chat_history",
+					JSON.stringify(savedHistory)
+				);
+
+				return oldAddMessageToChat(role, content);
+			};
+
+			// -------------------------------
+			// 🔗 LINK FIX (CLICKABLE URLS)
+			// -------------------------------
+			document.addEventListener("click", function (e) {
+				if (e.target.tagName === "A") {
+					e.preventDefault();
+					window.open(e.target.href, "_blank");
+				}
+			});
+		</script>
 	</body>
 </html>
